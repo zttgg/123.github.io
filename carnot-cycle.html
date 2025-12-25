@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>卡诺循环可视化</title>
+  <script src="https://cdn.jsdelivr.net/npm/p5@1.4.0/lib/p5.min.js"></script>
+  <style>
+    body { font-family: Arial; margin: 20px; }
+    .controls { margin-bottom: 20px; }
+    label { display: inline-block; width: 120px; }
+    .value { width: 50px; display: inline-block; }
+  </style>
+</head>
+<body>
+  <h1>卡诺循环与热机效率可视化</h1>
+  
+  <div class="controls">
+    <label>高温热源T1(K):</label>
+    <input type="range" id="T1" min="300" max="1000" value="600">
+    <span class="value" id="T1-val">600</span>
+    
+    <label>低温热源T2(K):</label>
+    <input type="range" id="T2" min="100" max="500" value="300">
+    <span class="value" id="T2-val">300</span>
+  </div>
+  
+  <div>
+    <p>卡诺效率η_Carnot: <span id="eta-carnot">0.5</span></p>
+    <p>实际效率η_actual: <span id="eta-actual">0.45</span>（模拟不可逆损耗）</p>
+  </div>
+
+  <script>
+    let T1, T2;
+    let sliderT1, sliderT2;
+    let t = 0; // 循环进度（0~1）
+    let cycleStep = 0; // 当前循环步骤（0-3对应4个过程）
+
+    function setup() {
+      createCanvas(600, 400);
+      
+      // 初始化滑块
+      sliderT1 = select('#T1');
+      sliderT2 = select('#T2');
+      sliderT1.input(updateParams);
+      sliderT2.input(updateParams);
+      updateParams();
+    }
+
+    function updateParams() {
+      T1 = parseInt(sliderT1.value());
+      T2 = parseInt(sliderT2.value());
+      select('#T1-val').html(T1);
+      select('#T2-val').html(T2);
+      
+      // 计算效率
+      let etaCarnot = 1 - T2 / T1;
+      let etaActual = etaCarnot * 0.9; // 模拟实际热机损耗
+      select('#eta-carnot').html(etaCarnot.toFixed(2));
+      select('#eta-actual').html(etaActual.toFixed(2));
+    }
+
+    function draw() {
+      background(240);
+      t += 0.005;
+      if (t > 1) { t = 0; cycleStep = (cycleStep + 1) % 4; }
+
+      // 绘制P-V图（简化版）
+      push();
+      translate(50, 50);
+      stroke(0);
+      line(0, 300, 500, 300); // V轴（体积）
+      line(0, 300, 0, 50);    // P轴（压强）
+      fill(0);
+      text("体积V", 480, 320);
+      text("压强P", -20, 70);
+
+      // 卡诺循环4个点的坐标（简化模拟）
+      let V_A = 100, P_A = 250;
+      let V_B = 200, P_B = 250; // 等温膨胀（P不变，V增大）
+      let V_C = 300, P_C = 100; // 绝热膨胀（P减小，V增大）
+      let V_D = 150, P_D = 100; // 等温压缩（P不变，V减小）
+      
+      // 绘制循环路径
+      stroke(0, 0, 255);
+      strokeWeight(2);
+      // 步骤1: A→B（等温膨胀）
+      line(V_A, 300 - P_A, V_B, 300 - P_B);
+      // 步骤2: B→C（绝热膨胀）
+      line(V_B, 300 - P_B, V_C, 300 - P_C);
+      // 步骤3: C→D（等温压缩）
+      line(V_C, 300 - P_C, V_D, 300 - P_D);
+      // 步骤4: D→A（绝热压缩）
+      line(V_D, 300 - P_D, V_A, 300 - P_A);
+
+      // 绘制当前工质点
+      let x, y;
+      if (cycleStep === 0) { // A→B
+        x = lerp(V_A, V_B, t);
+        y = 300 - P_A;
+        fill(255, 0, 0);
+        text("等温膨胀（吸热Q1）", 200, 20);
+      } else if (cycleStep === 1) { // B→C
+        x = lerp(V_B, V_C, t);
+        y = 300 - lerp(P_B, P_C, t);
+        fill(0, 255, 0);
+        text("绝热膨胀（无热量交换）", 200, 20);
+      } else if (cycleStep === 2) { // C→D
+        x = lerp(V_C, V_D, t);
+        y = 300 - P_C;
+        fill(255, 255, 0);
+        text("等温压缩（放热Q2）", 200, 20);
+      } else { // D→A
+        x = lerp(V_D, V_A, t);
+        y = 300 - lerp(P_D, P_A, t);
+        fill(0, 0, 255);
+        text("绝热压缩（无热量交换）", 200, 20);
+      }
+      ellipse(x, y, 10, 10);
+      pop();
+    }
+  </script>
+</body>
+</html>
